@@ -34,7 +34,7 @@ namespace AceOfShadows.Controllers
     {
         Vector3[] stackPositions = 
         {
-            new Vector3(-4f, 0, 0),
+            new Vector3(-4.5f, 0, 0),
             new Vector3(4f, 0, 0)
         };
     

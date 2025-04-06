@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: c8a39b6dba23c8d4482a34beeb3f0252
+guid: 04a2ee2f29b1c2d448a41cb9eeecdc5b
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 3053415663021133704
-    second: cardBack_blue5_0
+      213: 6850352397346096737
+    second: MainMenuBackground_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -37,7 +37,7 @@ TextureImporter:
   maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
-    filterMode: 0
+    filterMode: 1
     aniso: 1
     mipBias: 0
     wrapU: 1
@@ -46,7 +46,7 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 1
+  spriteMode: 2
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
@@ -72,7 +72,7 @@ TextureImporter:
   platformSettings:
   - serializedVersion: 4
     buildTarget: DefaultTexturePlatform
-    maxTextureSize: 256
+    maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 1
@@ -113,23 +113,23 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: cardBack_blue5_0
+      name: MainMenuBackground_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 140
-        height: 190
+        width: 1920
+        height: 1086
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 88f0df92e59ef5a20800000000000000
-      internalID: 3053415663021133704
+      spriteID: 1664f0ee537511f50800000000000000
+      internalID: 6850352397346096737
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      cardBack_blue5_0: 3053415663021133704
+      MainMenuBackground_0: 6850352397346096737
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

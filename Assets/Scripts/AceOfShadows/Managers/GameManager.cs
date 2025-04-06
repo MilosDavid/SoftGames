@@ -53,6 +53,7 @@ namespace AceOfShadows.Managers
             rectOfDialog.gameObject.SetActive(false);
             rectOfGameOverButton.gameObject.SetActive(false);
             SceneManager.LoadScene("MainMenu");
+            ResumeGame();
         }
         
     
