@@ -3,35 +3,67 @@ using UnityEngine;
 
 namespace MagicWords
 {
-    public class MessagePool
+    public class MessagePool 
     {
-        private readonly GameObject prefab;
+        private readonly GameObject leftPrefab;
+        private readonly GameObject rightPrefab;
         private readonly Transform parent;
         private readonly Queue<GameObject> pool = new Queue<GameObject>();
-
-        public MessagePool(GameObject prefab, Transform parent, int initialSize = 10)
+        
+        public MessagePool(GameObject leftPrefab, GameObject rightPrefab, Transform parent, int initialSize = 10)
         {
-            this.prefab = prefab;
+            this.leftPrefab = leftPrefab;
+            this.rightPrefab = rightPrefab;
             this.parent = parent;
 
             for (int i = 0; i < initialSize; i++)
             {
-                GameObject obj = GameObject.Instantiate(prefab, parent);
-                obj.SetActive(false);
-                pool.Enqueue(obj);
+                GameObject leftObj = GameObject.Instantiate(leftPrefab, parent);
+                leftObj.SetActive(false);
+                pool.Enqueue(leftObj);
+
+                GameObject rightObj = GameObject.Instantiate(rightPrefab, parent);
+                rightObj.SetActive(false);
+                pool.Enqueue(rightObj);
             }
         }
 
-        public GameObject Get()
+        public GameObject Get(string position)
         {
-            if (pool.Count > 0)
+            foreach (var obj in pool)
             {
-                GameObject obj = pool.Dequeue();
-                obj.SetActive(true);
-                return obj;
+                if (!obj.activeInHierarchy && 
+                    ((position == "left" && obj.CompareTag("LeftMessage")) || 
+                     (position == "right" && obj.CompareTag("RightMessage"))))
+                {
+                    obj.SetActive(true);
+                    int insertIndex = GetLastActiveSiblingIndex() + 1;
+                    obj.transform.SetSiblingIndex(insertIndex);
+                    return obj;
+                }
+            }
+            
+            GameObject newObj = position == "left" 
+                ? GameObject.Instantiate(leftPrefab, parent) 
+                : GameObject.Instantiate(rightPrefab, parent);
+        
+            newObj.transform.SetSiblingIndex(GetLastActiveSiblingIndex() + 1);
+            return newObj;
+        }
+        
+        private int GetLastActiveSiblingIndex()
+        {
+            int lastActiveIndex = -1;
+
+            for (int i = 0; i < parent.childCount; i++)
+            {
+                if (parent.GetChild(i).gameObject.activeSelf)
+                {
+                    lastActiveIndex = i;
+                }
             }
 
-            return GameObject.Instantiate(prefab, parent);
+            return lastActiveIndex;
         }
 
         public void Return(GameObject obj)

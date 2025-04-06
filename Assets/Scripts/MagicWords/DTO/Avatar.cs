@@ -13,6 +13,12 @@ namespace MagicWords.DTO
         public string Url { get; set; }
         
         [JsonProperty("position")]
-        public string Position { get; set; }
+        public string Position 
+        {
+            get => _position;
+            set => _position = value?.ToLower() == "right" ? "right" : "left";
+        }
+        
+        private string _position;
     }
 }

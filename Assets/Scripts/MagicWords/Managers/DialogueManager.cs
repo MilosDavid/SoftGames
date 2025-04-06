@@ -1,9 +1,10 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using MagicWords.DTO;
-using Newtonsoft.Json;
+using MagicWords.Interfaces;
+using MagicWords.Loaders;
 using UnityEngine;
-using UnityEngine.Networking;
 using Avatar = MagicWords.DTO.Avatar;
 
 namespace MagicWords.Managers
@@ -11,98 +12,60 @@ namespace MagicWords.Managers
     public class DialogueManager : MonoBehaviour
     {
         [SerializeField] private Transform dialogueContainer;
-        [SerializeField] private GameObject messagePrefab;
+
         [SerializeField] private GameObject leftMessagePrefab;
         [SerializeField] private GameObject rightMessagePrefab;
+        
         [SerializeField] private string jsonUrl = "https://private-624120-softgamesassignment.apiary-mock.com/v2/magicwords";
         [SerializeField] private float delayBetweenMessages = 3f;
 
+        private IDialogueDataLoader dataLoader;
+        private IImageLoader imageLoader;
+        
+        private MessagePool messagePool;
+        private EmojiReplacer emojiReplacer;
+        
         private DialogData dialogueData;
-        private Dictionary<string, Avatar> avatarDictionary = new Dictionary<string, Avatar>();
-        private Dictionary<string, Emojy> emojiDictionary = new Dictionary<string, Emojy>();
+        private Dictionary<string, Avatar> avatars = new Dictionary<string, Avatar>();
+        private Dictionary<string, Emojy> emojis = new Dictionary<string, Emojy>();
         private Dictionary<string, Sprite> emojiSprites = new Dictionary<string, Sprite>();
         private Dictionary<string, Sprite> avatarSprites = new Dictionary<string, Sprite>();
         
-        private MessagePool messagePool;
-        private float yOffset = 0f;
+        private void Awake()
+        {
+            dataLoader = new WebDialogueDataLoader(jsonUrl);
+            imageLoader = new WebImageLoader();
+            messagePool = new MessagePool(leftMessagePrefab, rightMessagePrefab, dialogueContainer, 10);
+        }
         
         private void Start()
         {
-            StartCoroutine(LoadData());
+            StartCoroutine(dataLoader.LoadDialogueData(OnDialogueDataLoaded));
         }
-
-        private IEnumerator LoadData()
+        
+        private void OnDialogueDataLoaded(DialogData data)
         {
-            UnityWebRequest www = UnityWebRequest.Get(jsonUrl);
-            yield return www.SendWebRequest();
+            emojiReplacer = new EmojiReplacer(data.Emojies.ToDictionary(e => e.Name, e => e));
+            avatars = data.Avatars.ToDictionary(a => a.Name, a => a);
+            emojis = data.Emojies.ToDictionary(e => e.Name, e => e);
 
-            if (www.result != UnityWebRequest.Result.Success)
+            foreach (var avatar in data.Avatars)
             {
-                Debug.LogError("Error loading JSON: " + www.error);
-                yield break;
+                StartCoroutine(imageLoader.LoadSprite(avatar.Url, sprite => avatarSprites[avatar.Name] = sprite));
             }
 
-            messagePool = new MessagePool(messagePrefab, dialogueContainer, 10);
-            
-            dialogueData = JsonConvert.DeserializeObject<DialogData>(www.downloadHandler.text);
-            
-            foreach (var avatar in dialogueData.Avatars)
+            foreach (var emoji in data.Emojies)
             {
-                avatarDictionary[avatar.Name] = avatar;
-                StartCoroutine(LoadAvatarSprite(avatar.Url, avatar.Name));
+                StartCoroutine(imageLoader.LoadSprite(emoji.Url, sprite => emojiSprites[emoji.Name] = sprite));
             }
 
-            foreach (var emoji in dialogueData.Emojies)
-            {
-                emojiDictionary[emoji.Name] = emoji;
-                StartCoroutine(LoadEmojiSprite(emoji.Url, emoji.Name));
-            }
-
-            StartCoroutine(DisplayDialogueWithDelay());
+            StartCoroutine(DisplayDialogueWithDelay(data.Dialogue));
         }
-
-        private IEnumerator LoadEmojiSprite(string url, string emojiName)
-        {
-            if (url == "https://api.dicebear.com:81/9.x/fun-emoji/png?seed=Sad")
-            {
-                url = "https://api.dicebear.com/9.x/fun-emoji/png?seed=Sad";
-            }
-            
-            UnityWebRequest www = UnityWebRequestTexture.GetTexture(url);
-            yield return www.SendWebRequest();
-
-            if (www.result != UnityWebRequest.Result.Success)
-            {
-                Debug.LogError("Error loading emoji: " + www.error);
-                yield break;
-            }
-
-            Texture2D texture = ((DownloadHandlerTexture)www.downloadHandler).texture;
-            Sprite sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), Vector2.zero);
-            emojiSprites[emojiName] = sprite;
-        }
-
-        private IEnumerator LoadAvatarSprite(string url, string avatarName)
-        {
-            UnityWebRequest www = UnityWebRequestTexture.GetTexture(url);
-            yield return www.SendWebRequest();
-
-            if (www.result != UnityWebRequest.Result.Success)
-            {
-                Debug.LogError("Error loading avatar: " + www.error);
-                yield break;
-            }
-
-            Texture2D texture = ((DownloadHandlerTexture)www.downloadHandler).texture;
-            Sprite sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), Vector2.zero);
-            avatarSprites[avatarName] = sprite;
-        }
-
-        private IEnumerator DisplayDialogueWithDelay()
+        
+        private IEnumerator DisplayDialogueWithDelay(List<Dialogue> lines)
         {
             yield return new WaitForSeconds(1f);
-
-            foreach (var line in dialogueData.Dialogue)
+            foreach (var line in lines)
             {
                 DisplayMessage(line);
                 yield return new WaitForSeconds(delayBetweenMessages);
@@ -111,30 +74,18 @@ namespace MagicWords.Managers
         
         private void DisplayMessage(Dialogue line)
         {
-            GameObject messageObj = messagePool.Get();
-            MessageUI messageUI = messageObj.GetComponent<MessageUI>();
+            string position = avatars.TryGetValue(line.Name, out var avatar) ? avatar.Position : "left";
+            GameObject messageObj = messagePool.Get(position);
 
-            Avatar avatar = avatarDictionary.ContainsKey(line.Name) ? avatarDictionary[line.Name] : null;
-            if (avatarSprites.ContainsKey(line.Name))
+            MessageUI ui = messageObj.GetComponent<MessageUI>();
+            ui.SetName(line.Name);
+
+            if (avatarSprites.TryGetValue(line.Name, out var sprite))
             {
-                messageUI.SetAvatar(avatarSprites[line.Name]);
+                ui.SetAvatar(sprite);
             }
 
-            messageUI.SetName(line.Name);
-            messageUI.SetText(ProcessText(line.Text), emojiSprites);
-
-            RectTransform messageRect = messageObj.GetComponent<RectTransform>();
-            messageRect.anchoredPosition = new Vector2(0, yOffset);
-            yOffset -= messageRect.rect.height;
-        }
-
-        private string ProcessText(string text)
-        {
-            foreach (var emoji in emojiDictionary)
-            {
-                text = text.Replace("{" + emoji.Key + "}", $"<sprite name=\"{emoji.Key}\">");
-            }
-            return text;
+            ui.SetText(emojiReplacer.ProcessText(line.Text), emojiSprites);
         }
     }
 }
